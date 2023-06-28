@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import styles from './ChatInput.module.css';
 
-const ChatInput = ({ handleSubmit, authToken }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(!!authToken);
+const ChatInput = ({ handleSubmit }) => {
   const [handCashLoaded, setHandCashLoaded] = useState(false);
+  const [authToken, setAuthToken] = useState(null);
+  const [txid, setTxid] = useState('');
   const handCashContainerRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -21,11 +22,10 @@ const ChatInput = ({ handleSubmit, authToken }) => {
     };
   }, []);
 
-  const handleFormSubmit = async (event) => {
-    event.preventDefault();
+  const handleFormSubmit = async () => {
     const prompt = inputRef.current.value.trim();
     if (prompt !== '') {
-      handleSubmit(prompt);
+      handleSubmit(prompt, txid);
       inputRef.current.value = '';
     } else {
       console.log('Prompt is empty. No request sent.');
@@ -38,20 +38,57 @@ const ChatInput = ({ handleSubmit, authToken }) => {
     }
   };
 
+  const handleHandCashPayment = async () => {
+    if (window.handCashConnect) {
+      try {
+        const paymentParameters = {
+          description: 'ChatBSV Payment',
+          outputs: [
+            {
+              to: 'YOUR_BITCOIN_SV_ADDRESS',
+              currencyCode: 'USD',
+              sendAmount: '0.0099',
+            },
+          ],
+        };
+        const paymentResult = await window.handCashConnect.pay(paymentParameters);
+        const { txid } = paymentResult;
+        setTxid(txid);
+        setAuthToken(paymentResult.authToken);
+      } catch (error) {
+        console.error('HandCash payment error:', error);
+      }
+    }
+  };
+
   useEffect(() => {
     if (handCashLoaded && handCashContainerRef.current) {
       const handCashContainer = handCashContainerRef.current;
       handCashContainer.innerHTML = '';
 
-      // Render the form with the input field and submit button
-      handCashContainer.innerHTML = `
-        <form onSubmit="${handleFormSubmit}">
-          <input type="text" placeholder="Enter your prompt..." ref="${inputRef}" />
-          <button type="submit">Submit</button>
-        </form>
-      `;
+      if (authToken) {
+        // Render the form with the input field and submit button
+        handCashContainer.innerHTML = `
+          <form onSubmit="${handleFormSubmit}">
+            <input type="text" placeholder="Enter your prompt..." ref="${inputRef}" />
+            <button type="submit" class="submit">Submit</button>
+          </form>
+        `;
+      } else {
+        // Render the HandCash Connect button
+        const connectButton = document.createElement('button');
+        connectButton.innerText = 'Connect with HandCash';
+        connectButton.onclick = handleHandCashConnect;
+        handCashContainer.appendChild(connectButton);
+      }
     }
-  }, [handCashLoaded]);
+  }, [handCashLoaded, authToken]);
+
+  useEffect(() => {
+    if (txid && authToken) {
+      handleFormSubmit();
+    }
+  }, [txid, authToken]);
 
   return (
     <div className={styles.chatFooter}>
