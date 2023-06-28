@@ -98,21 +98,12 @@ function IndexPage({ tokens }) {
   
 
   useEffect(() => {
-    const connectWithHandCash = async () => {
-      try {
-        const response = await axios.get('/connect');
-        if (response.status === 200) {
-          const { authToken } = response.data;
-          setAuthToken(authToken);
-        }
-      } catch (error) {
-        console.error('Error connecting with HandCash:', error);
-      }
-    };
-
-    connectWithHandCash();
+    const storedChat = localStorage.getItem('chat');
+    if (storedChat) {
+      const parsedChat = JSON.parse(storedChat);
+      setChat(parsedChat);
+    }
   }, []);
-
 
   const resetChat = () => {
     localStorage.removeItem('chat');
