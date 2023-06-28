@@ -42,10 +42,10 @@ const ChatInput = ({ handleSubmit }) => {
     if (window.handCashConnect) {
       try {
         const paymentParameters = {
-          description: 'ChatBSV Payment',
+          description: 'ChatBSV Prompt',
           outputs: [
             {
-              to: 'YOUR_BITCOIN_SV_ADDRESS',
+              to: 'chatbsv',
               currencyCode: 'USD',
               sendAmount: '0.0099',
             },
@@ -77,7 +77,7 @@ const ChatInput = ({ handleSubmit }) => {
       } else {
         // Render the HandCash Connect button
         const connectButton = document.createElement('button');
-        connectButton.innerText = 'Connect with HandCash';
+        connectButton.innerText = 'Login';
         connectButton.onclick = handleHandCashConnect;
         handCashContainer.appendChild(connectButton);
       }
