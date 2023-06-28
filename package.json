@@ -16,6 +16,7 @@
     "axios": "^0.26.1",
     "eslint": "8.40.0",
     "eslint-config-next": "13.4.2",
+    "handcash": "^0.0.4",
     "isomorphic-unfetch": "^4.0.2",
     "nanoid": "^4.0.2",
     "next": "^13.4.2",

@@ -2,53 +2,122 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { nanoid } from 'nanoid';
 import ChatBody from '../components/ChatBody';
 import ChatInput from '../components/ChatInput';
 import Header from '../components/Header';
 import Head from 'next/head';
-import { nanoid } from 'nanoid';
 import './global.css';
 
-function IndexPage() {
+function IndexPage({ tokens }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
   const [chat, setChat] = useState([]);
-  const [isPaymentSuccess, setIsPaymentSuccess] = useState(false);
+  const [txid, setTxid] = useState('');
 
-  const handleSubmit = async (userMessage) => {
+  const getAssistantReply = async (prompt, chatHistory) => {
     try {
-      const response = await axios.post('/.netlify/functions/getChatReply', {
-        prompt: userMessage,
-        history: chat,
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), 20000);
+  
+      const response = await fetch('/.netlify/functions/getChatReply', {
+        method: 'POST',
+        body: JSON.stringify({ prompt, history: chatHistory }),
+        signal: controller.signal,
       });
-
-      const assistantResponse = response.data.message;
-      const tokens = response.data.tokens;
-
+  
+      clearTimeout(id);
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+  
+      const data = await response.json();
+      return { message: data.message, tokens: data.tokens };
+    } catch (error) {
+      console.error('Error:', error);
+      return { message: 'An error occurred during processing.', tokens: 0 };
+    }
+  };
+  
+  
+  const handleSubmit = async (userMessage, userTxid) => {
+    const newUserMessage = {
+      id: nanoid(),
+      role: 'user',
+      content: userMessage,
+      txid: userTxid,
+    };
+  
+    setChat((prevChat) => {
+      const updatedChat = [...prevChat, newUserMessage];
+      if (newUserMessage.role !== 'error' && newUserMessage.role !== 'loading') {
+        localStorage.setItem('chat', JSON.stringify(updatedChat));
+      }
+      return updatedChat;
+    });
+  
+    setIsError(false);
+    setIsLoading(true);
+  
+    try {
+      const storedChat = localStorage.getItem('chat');
+      const parsedChat = storedChat ? JSON.parse(storedChat) : [];
+  
+      const assistantResponse = await getAssistantReply(userMessage, parsedChat);
+  
       const newAssistantMessage = {
         id: nanoid(),
         role: 'assistant',
-        content: assistantResponse,
-        tokens: tokens,
-        txid: null, // Set txid to null initially
+        content: assistantResponse.message,
+        tokens: assistantResponse.tokens,
+        txid: userTxid && !isLoading ? userTxid : null,
       };
-
-      setChat((prevChat) => [...prevChat, newAssistantMessage]);
+  
+      setChat((prevChat) => {
+        const updatedChat = [...prevChat, newAssistantMessage];
+        if (newAssistantMessage.content !== 'An error occurred during processing.') {
+          localStorage.setItem('chat', JSON.stringify(updatedChat));
+          localStorage.setItem('tokens', assistantResponse.tokens);
+        }
+        return updatedChat;
+      });
+  
+      setIsLoading(false);
     } catch (error) {
       console.error('Error:', error);
+      setIsError(true);
+      setErrorMessage(error.message || 'An error occurred');
+      setIsLoading(false);
     }
   };
+  
+  
+  
+  
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const paymentResult = urlParams.get('paymentResult');
+    const connectWithHandCash = async () => {
+      try {
+        const response = await axios.get('/connect');
+        if (response.status === 200) {
+          const { authToken } = response.data;
+          setAuthToken(authToken);
+        }
+      } catch (error) {
+        console.error('Error connecting with HandCash:', error);
+      }
+    };
 
-    if (paymentResult) {
-      setIsPaymentSuccess(true);
-    }
+    connectWithHandCash();
   }, []);
 
+
   const resetChat = () => {
-    setChat([]);
-    setIsPaymentSuccess(false);
+    localStorage.removeItem('chat');
+    localStorage.removeItem('txid');
+    window.location.reload();
   };
 
   return (
