@@ -21,7 +21,8 @@ const ChatInput = ({ handleSubmit, authToken }) => {
     };
   }, []);
 
-  const handleFormSubmit = async () => {
+  const handleFormSubmit = async (event) => {
+    event.preventDefault();
     const prompt = inputRef.current.value.trim();
     if (prompt !== '') {
       handleSubmit(prompt);
@@ -46,7 +47,7 @@ const ChatInput = ({ handleSubmit, authToken }) => {
         // Render the form with the input field and submit button
         handCashContainer.innerHTML = `
           <form onSubmit="${handleFormSubmit}">
-            <input type="text" ref="${inputRef}" placeholder="Enter your prompt..." />
+            <input type="text" placeholder="Enter your prompt..." ref="${inputRef}" />
             <button type="submit">Submit</button>
           </form>
         `;
