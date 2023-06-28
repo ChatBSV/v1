@@ -43,23 +43,15 @@ const ChatInput = ({ handleSubmit, authToken }) => {
       const handCashContainer = handCashContainerRef.current;
       handCashContainer.innerHTML = '';
 
-      if (isAuthenticated) {
-        // Render the form with the input field and submit button
-        handCashContainer.innerHTML = `
-          <form onSubmit="${handleFormSubmit}">
-            <input type="text" placeholder="Enter your prompt..." ref="${inputRef}" />
-            <button type="submit">Submit</button>
-          </form>
-        `;
-      } else {
-        // Render the HandCash Connect button
-        const connectButton = document.createElement('button');
-        connectButton.innerText = 'Connect with HandCash';
-        connectButton.onclick = handleHandCashConnect;
-        handCashContainer.appendChild(connectButton);
-      }
+      // Render the form with the input field and submit button
+      handCashContainer.innerHTML = `
+        <form onSubmit="${handleFormSubmit}">
+          <input type="text" placeholder="Enter your prompt..." ref="${inputRef}" />
+          <button type="submit">Submit</button>
+        </form>
+      `;
     }
-  }, [handCashLoaded, isAuthenticated]);
+  }, [handCashLoaded]);
 
   return (
     <div className={styles.chatFooter}>
