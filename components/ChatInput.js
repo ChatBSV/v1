@@ -1,5 +1,7 @@
 // components/ChatInput.js
 
+// components/ChatInput.js
+
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import styles from './ChatInput.module.css';
@@ -60,15 +62,11 @@ const ChatInput = () => {
           <input type="text" placeholder="Enter your prompt..." ref="${inputRef}" />
           <button type="submit" className="${styles.submitButton}">Submit</button>
         </form>
-        <button class="${styles.submitButton}" onclick="${handleHandCashConnect}" ${
-        isAuthenticated ? 'style="display: none;"' : ''
-      }>Connect with HandCash</button>
-        <button class="${styles.submitButton}" disabled ${
-        isAuthenticated ? '' : 'style="display: none;"'
-      }>Submit</button>
+        <button class="${styles.submitButton}" onclick="${handleHandCashConnect}">Connect with HandCash</button>
+        <button class="${styles.submitButton}" disabled>Submit</button>
       `;
     }
-  }, [handCashLoaded, isAuthenticated]);
+  }, [handCashLoaded]);
 
   useEffect(() => {
     // Check if the user is authenticated
@@ -95,3 +93,4 @@ const ChatInput = () => {
 };
 
 export default ChatInput;
+
