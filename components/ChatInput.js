@@ -1,12 +1,12 @@
 // components/ChatInput.js
 
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import styles from './ChatInput.module.css';
 
-const ChatInput = ({ handleSubmit }) => {
+const ChatInput = () => {
   const [handCashLoaded, setHandCashLoaded] = useState(false);
-  const [authToken, setAuthToken] = useState(null);
-  const [txid, setTxid] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const handCashContainerRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -22,10 +22,21 @@ const ChatInput = ({ handleSubmit }) => {
     };
   }, []);
 
-  const handleFormSubmit = async () => {
+  const handleFormSubmit = async (event) => {
+    event.preventDefault();
     const prompt = inputRef.current.value.trim();
     if (prompt !== '') {
-      handleSubmit(prompt, txid);
+      try {
+        const response = await axios.post('/getChatReply', {
+          prompt: inputRef.current.value,
+        });
+
+        // Process the response as needed
+        console.log(response.data);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+
       inputRef.current.value = '';
     } else {
       console.log('Prompt is empty. No request sent.');
@@ -38,57 +49,43 @@ const ChatInput = ({ handleSubmit }) => {
     }
   };
 
-  const handleHandCashPayment = async () => {
-    if (window.handCashConnect) {
-      try {
-        const paymentParameters = {
-          description: 'ChatBSV Prompt',
-          outputs: [
-            {
-              to: 'chatbsv',
-              currencyCode: 'USD',
-              sendAmount: '0.0099',
-            },
-          ],
-        };
-        const paymentResult = await window.handCashConnect.pay(paymentParameters);
-        const { txid } = paymentResult;
-        setTxid(txid);
-        setAuthToken(paymentResult.authToken);
-      } catch (error) {
-        console.error('HandCash payment error:', error);
-      }
-    }
-  };
-
   useEffect(() => {
     if (handCashLoaded && handCashContainerRef.current) {
       const handCashContainer = handCashContainerRef.current;
       handCashContainer.innerHTML = '';
 
-      if (authToken) {
-        // Render the form with the input field and submit button
-        handCashContainer.innerHTML = `
-          <form onSubmit="${handleFormSubmit}">
-            <input type="text" placeholder="Enter your prompt..." ref="${inputRef}" />
-            <button type="submit" class="submit">Submit</button>
-          </form>
-        `;
-      } else {
-        // Render the HandCash Connect button
-        const connectButton = document.createElement('button');
-        connectButton.innerText = 'Login';
-        connectButton.onclick = handleHandCashConnect;
-        handCashContainer.appendChild(connectButton);
-      }
+      // Render the form with the input field and submit button
+      handCashContainer.innerHTML = `
+        <form onSubmit="${handleFormSubmit}" className="${styles.inputForm}">
+          <input type="text" placeholder="Enter your prompt..." ref="${inputRef}" />
+          <button type="submit" className="${styles.submitButton}">Submit</button>
+        </form>
+        <button class="${styles.submitButton}" onclick="${handleHandCashConnect}" ${
+        isAuthenticated ? 'style="display: none;"' : ''
+      }>Connect with HandCash</button>
+        <button class="${styles.submitButton}" disabled ${
+        isAuthenticated ? '' : 'style="display: none;"'
+      }>Submit</button>
+      `;
     }
-  }, [handCashLoaded, authToken]);
+  }, [handCashLoaded, isAuthenticated]);
 
   useEffect(() => {
-    if (txid && authToken) {
-      handleFormSubmit();
-    }
-  }, [txid, authToken]);
+    // Check if the user is authenticated
+    // You can make a request to the Heroku server to verify the authentication status
+    const checkAuthentication = async () => {
+      try {
+        const response = await axios.get('/checkAuthentication');
+
+        // Set the authentication status based on the response from the server
+        setIsAuthenticated(response.data.isAuthenticated);
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    };
+
+    checkAuthentication();
+  }, []);
 
   return (
     <div className={styles.chatFooter}>
