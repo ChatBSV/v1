@@ -4,81 +4,27 @@ import React, { useState, useEffect, useRef } from 'react';
 import styles from './ChatInput.module.css';
 
 const ChatInput = ({ handleSubmit }) => {
-  const [moneyButtonLoaded, setMoneyButtonLoaded] = useState(false);
-  const [txid, setTxid] = useState('');
-  const moneyButtonContainerRef = useRef(null);
+  const [isHandCashConnected, setIsHandCashConnected] = useState(false);
   const inputRef = useRef(null);
 
   useEffect(() => {
-    const moneyButtonScript = document.createElement('script');
-    moneyButtonScript.src = 'https://www.moneybutton.com/moneybutton.js';
-    moneyButtonScript.async = true;
-    moneyButtonScript.onload = () => setMoneyButtonLoaded(true);
-    document.body.appendChild(moneyButtonScript);
+    const urlParams = new URLSearchParams(window.location.search);
+    const authToken = urlParams.get('authToken');
 
-    return () => {
-      document.body.removeChild(moneyButtonScript);
-    };
+    if (authToken) {
+      setIsHandCashConnected(true);
+    }
   }, []);
 
-  const handleFormSubmit = async () => {
+  const handleFormSubmit = (event) => {
+    event.preventDefault();
     const prompt = inputRef.current.value.trim();
-    if (prompt !== '') {
-      const storedTxid = localStorage.getItem('txid');
-      handleSubmit(prompt, storedTxid);
+
+    if (isHandCashConnected && prompt !== '') {
+      handleSubmit(prompt);
       inputRef.current.value = '';
     } else {
-      console.log('Prompt is empty. No request sent.');
-    }
-  };
-
-  const handleMoneyButtonPayment = (payment) => {
-    const { txid } = payment;
-    console.log('Transaction ID:', txid);
-    localStorage.setItem('txid', txid);
-    setTxid(txid);
-
-    const prompt = inputRef.current.value.trim();
-    if (prompt !== '') {
-      handleFormSubmit();
-    }
-  };
-
-  useEffect(() => {
-    if (moneyButtonLoaded && moneyButtonContainerRef.current) {
-      const moneyButtonContainer = moneyButtonContainerRef.current;
-      moneyButtonContainer.innerHTML = '';
-
-      const moneyButton = window.moneyButton.render(moneyButtonContainer, {
-        to: '3332',
-        amount: '0.0099',
-        currency: 'USD',
-        data: { input: inputRef.current.value },
-        onPayment: handleMoneyButtonPayment,
-        onCryptoOperations: async (event) => {
-          const { type, id, cryptoOperations } = event;
-          if (type === 'payment') {
-            const payment = cryptoOperations.find((op) => op.id === id);
-            if (payment) {
-              const { txid } = payment;
-              console.log('Transaction ID:', txid);
-              localStorage.setItem('txid', txid);
-              setTxid(txid);
-              handleSubmit('', txid);
-            }
-          }
-        },
-      });
-
-      return () => {
-        moneyButton.unmount();
-      };
-    }
-  }, [moneyButtonLoaded]);
-
-  const handleKeyDown = (event) => {
-    if (event.key === 'Enter') {
-      event.preventDefault();
+      console.log('Prompt is empty or HandCash not connected. No request sent.');
     }
   };
 
@@ -87,14 +33,20 @@ const ChatInput = ({ handleSubmit }) => {
       <form onSubmit={handleFormSubmit} className={styles.inputForm}>
         <input
           type="text"
-          onKeyDown={handleKeyDown}
           className={styles.inputField}
           placeholder="Enter your prompt..."
           ref={inputRef}
+          disabled={!isHandCashConnected}
         />
-        <div className={styles.mbWrapper}>
-          <div ref={moneyButtonContainerRef} className={styles.moneyButton}></div>
-        </div>
+        {isHandCashConnected ? (
+          <button type="submit" className={styles.submitButton}>
+            Submit
+          </button>
+        ) : (
+          <button className={styles.connectButton} onClick={() => (window.location.href = '/connect')}>
+            Connect with HandCash
+          </button>
+        )}
       </form>
     </div>
   );

@@ -2,113 +2,53 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { nanoid } from 'nanoid';
 import ChatBody from '../components/ChatBody';
 import ChatInput from '../components/ChatInput';
 import Header from '../components/Header';
 import Head from 'next/head';
+import { nanoid } from 'nanoid';
 import './global.css';
 
-function IndexPage({ tokens }) {
-  const [isLoading, setIsLoading] = useState(false);
-  const [isError, setIsError] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+function IndexPage() {
   const [chat, setChat] = useState([]);
-  const [txid, setTxid] = useState('');
+  const [isPaymentSuccess, setIsPaymentSuccess] = useState(false);
 
-  const getAssistantReply = async (prompt, chatHistory) => {
+  const handleSubmit = async (userMessage) => {
     try {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), 20000);
-  
-      const response = await fetch('/.netlify/functions/getChatReply', {
-        method: 'POST',
-        body: JSON.stringify({ prompt, history: chatHistory }),
-        signal: controller.signal,
+      const response = await axios.post('/.netlify/functions/getChatReply', {
+        prompt: userMessage,
+        history: chat,
       });
-  
-      clearTimeout(id);
-  
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-  
-      const data = await response.json();
-      return { message: data.message, tokens: data.tokens };
-    } catch (error) {
-      console.error('Error:', error);
-      return { message: 'An error occurred during processing.', tokens: 0 };
-    }
-  };
-  
-  
-  const handleSubmit = async (userMessage, userTxid) => {
-    const newUserMessage = {
-      id: nanoid(),
-      role: 'user',
-      content: userMessage,
-      txid: userTxid,
-    };
-  
-    setChat((prevChat) => {
-      const updatedChat = [...prevChat, newUserMessage];
-      if (newUserMessage.role !== 'error' && newUserMessage.role !== 'loading') {
-        localStorage.setItem('chat', JSON.stringify(updatedChat));
-      }
-      return updatedChat;
-    });
-  
-    setIsError(false);
-    setIsLoading(true);
-  
-    try {
-      const storedChat = localStorage.getItem('chat');
-      const parsedChat = storedChat ? JSON.parse(storedChat) : [];
-  
-      const assistantResponse = await getAssistantReply(userMessage, parsedChat);
-  
+
+      const assistantResponse = response.data.message;
+      const tokens = response.data.tokens;
+
       const newAssistantMessage = {
         id: nanoid(),
         role: 'assistant',
-        content: assistantResponse.message,
-        tokens: assistantResponse.tokens,
-        txid: userTxid && !isLoading ? userTxid : null,
+        content: assistantResponse,
+        tokens: tokens,
+        txid: null, // Set txid to null initially
       };
-  
-      setChat((prevChat) => {
-        const updatedChat = [...prevChat, newAssistantMessage];
-        if (newAssistantMessage.content !== 'An error occurred during processing.') {
-          localStorage.setItem('chat', JSON.stringify(updatedChat));
-          localStorage.setItem('tokens', assistantResponse.tokens);
-        }
-        return updatedChat;
-      });
-  
-      setIsLoading(false);
+
+      setChat((prevChat) => [...prevChat, newAssistantMessage]);
     } catch (error) {
       console.error('Error:', error);
-      setIsError(true);
-      setErrorMessage(error.message || 'An error occurred');
-      setIsLoading(false);
     }
   };
-  
-  
-  
-  
 
   useEffect(() => {
-    const storedChat = localStorage.getItem('chat');
-    if (storedChat) {
-      const parsedChat = JSON.parse(storedChat);
-      setChat(parsedChat);
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentResult = urlParams.get('paymentResult');
+
+    if (paymentResult) {
+      setIsPaymentSuccess(true);
     }
   }, []);
 
   const resetChat = () => {
-    localStorage.removeItem('chat');
-    localStorage.removeItem('txid');
-    window.location.reload();
+    setChat([]);
+    setIsPaymentSuccess(false);
   };
 
   return (
